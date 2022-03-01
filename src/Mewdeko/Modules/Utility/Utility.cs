@@ -27,12 +27,15 @@ public partial class Utility : MewdekoModuleBase<UtilityService>
     private readonly DownloadTracker _tracker;
     private readonly InteractiveService _interactivity;
     private readonly ICoordinator _coordinator;
+    private readonly GreetSettingsService GreetService;
 
     public Utility(
         DiscordSocketClient client,
-        IStatsService stats, IBotCredentials creds, DownloadTracker tracker, InteractiveService serv, ICoordinator coordinator)
+        IStatsService stats, IBotCredentials creds, DownloadTracker tracker, InteractiveService serv, ICoordinator coordinator,
+        GreetSettingsService greetService)
     {
         _coordinator = coordinator;
+        GreetService = greetService;
         _interactivity = serv;
         _client = client;
         _stats = stats;
@@ -40,6 +43,14 @@ public partial class Utility : MewdekoModuleBase<UtilityService>
         _tracker = tracker;
     }
 
+    [MewdekoCommand, Usage, Description, Alias, RequireContext(ContextType.Guild), OfficialServerMod]
+    public async Task Verify(IGuildUser user)
+    {
+        var channel = await ctx.Guild.GetTextChannelAsync(744880021692350464);
+        await user.AddRolesAsync(new List<ulong>() { 788884380521070614, 837761148140388382 });
+        await user.RemoveRoleAsync(794777895188692992);
+        await GreetService.GreetTest(channel, user);
+    }
     [MewdekoCommand, Usage, Description, Alias]
     public async Task EmoteList([Remainder] string? emotetype = null)
     {
