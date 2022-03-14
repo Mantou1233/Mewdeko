@@ -18,7 +18,6 @@ public class ChatterBotService : INService
     private readonly IBotCredentials _creds;
     private readonly DbService _db;
     private readonly IHttpClientFactory _httpFactory;
-    public List<ulong> LimitUser = new();
 
     public ChatterBotService(DiscordSocketClient client,
         Mewdeko bot, CommandHandler cmd, IHttpClientFactory factory,
@@ -74,19 +73,15 @@ public class ChatterBotService : INService
                 var message = PrepareMessage(usrMsg as IUserMessage, out var cbs);
                 if (message == null || cbs == null)
                     return;
-                if (LimitUser.Contains(chan.Id)) return;
-                var cleverbotExecuted = await TryAsk(cbs, (ITextChannel) usrMsg.Channel, message).ConfigureAwait(false);
+                var cleverbotExecuted = await TryAsk(cbs, chan, message, usrMsg as IUserMessage).ConfigureAwait(false);
                 if (cleverbotExecuted)
                 {
                     Log.Information(
                         $@"CleverBot Executed
-                    Server: {chan.Guild.Name} {chan.Guild.Name}]
-                    Channel: {usrMsg.Channel?.Name} [{usrMsg.Channel?.Id}]
-                    UserId: {usrMsg.Author} [{usrMsg.Author.Id}]
-                    Message: {usrMsg.Content}");
-                    LimitUser.Add(chan.Id);
-                    await Task.Delay(5000);
-                    LimitUser.Remove(chan.Id);
+Server: {chan.Guild.Name} {chan.Guild.Name}]
+Channel: {chan?.Name} [{chan?.Id}]
+UserId: {usrMsg.Author} [{usrMsg.Author.Id}]
+Message: {usrMsg.Content}");
                 }
             }
             catch (Exception ex)
@@ -131,10 +126,10 @@ public class ChatterBotService : INService
         return message;
     }
 
-    private static async Task<bool> TryAsk(IChatterBotSession cleverbot, ITextChannel channel, string message)
+    private static async Task<bool> TryAsk(IChatterBotSession cleverbot, ITextChannel channel, string message, IUserMessage msg)
     {
         await channel.TriggerTypingAsync().ConfigureAwait(false);
-        string response = String.Empty;
+        string response;
         try
         {
             response = await cleverbot.Think(message).ConfigureAwait(false);
@@ -145,15 +140,7 @@ public class ChatterBotService : INService
                 "Cleverbot is paid and I cannot pay for it right now! If you want to support Mewdeko and reenable this please donate so it'll be available!\nhttps://ko-fi.com/mewdeko\nThis is not a premium feature and never will be!");
             return false;
         }
-        try
-        {
-            await channel.SendConfirmAsync(response.SanitizeMentions(true)).ConfigureAwait(false);
-        }
-        catch
-        {
-            await channel.SendConfirmAsync(response.SanitizeMentions(true)).ConfigureAwait(false); // try twice :\
-        }
-
+        await msg.ReplyAsync(embed: new EmbedBuilder().WithOkColor().WithDescription(response.SanitizeMentions(true)).Build()).ConfigureAwait(false);
         return true;
     }
 }
